@@ -25,5 +25,7 @@ parse_to_datetime(String) ->
     transform_datetime_string(String).
 
 %% transform string to datetime
-transform_datetime_string(String) ->
-    [{X} || X <- String].
+transform_datetime_string(String) -> transform_datetime_string(String, []).
+transform_datetime_string([H|T], Result) ->
+    %loop over whole string and replace chars
+    ok.
