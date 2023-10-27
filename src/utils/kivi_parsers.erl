@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 26.10.2023
+%% @last_updated: 27.10.2023
 %%
 %% @doc kivi simple key-value database - parsers
 %% @end
@@ -9,7 +9,7 @@
 -module(kivi_parsers).
 
 -export([parse_datetime/1,
-         parse_to_datetime/1]).
+         parse_to_datetime/1, parse_date/1, parse_time/1]).
 
 -spec parse_datetime(erlang:datetime()) -> binary().
 parse_datetime({{Year, Month, Day}, {Hours, Minutes, Seconds}}) -> 
@@ -25,7 +25,24 @@ parse_to_datetime(String) ->
     transform_datetime_string(String).
 
 %% transform string to datetime
-transform_datetime_string(String) -> transform_datetime_string(String, []).
-transform_datetime_string([H|T], Result) ->
-    %loop over whole string and replace chars
-    ok.
+transform_datetime_string(String) ->
+    [H|T] = string:split(String, "T"),
+    Date = parse_date(H),
+    Time = parse_time(T),
+    {Date, Time}.
+
+%% parse date to tuple
+parse_date(Date) ->
+    SplitDate = string:split(Date, "-", all),
+    ParsedDate = [list_to_integer(X) || X <- SplitDate],   
+    list_to_tuple(ParsedDate).
+
+%% parse time to tuple
+parse_time(Time) ->
+    % precise to be generic
+    NewTime = string:replace(Time, "Z", "", all),
+    %NewTime = string:substr(Time, 1, 8),
+    SplitTime = string:split(NewTime, ":", all),
+    ParsedTime = [list_to_integer(X) || X <- SplitTime],
+    list_to_tuple(ParsedTime).
+    
