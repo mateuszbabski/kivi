@@ -15,8 +15,7 @@
 -spec parse_datetime(erlang:datetime()) -> binary().
 parse_datetime({{Year, Month, Day}, {Hours, Minutes, Seconds}}) -> 
     Datetime = "~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0BZ",
-    Formatted = io_lib:format(Datetime, [Year, Month, Day, Hours, Minutes, Seconds]),
-    list_to_binary(Formatted).
+    io_lib:format(Datetime, [Year, Month, Day, Hours, Minutes, Seconds]).    
 
 -spec parse_to_datetime(string()) -> erlang:datetime().
 parse_to_datetime(Binary) when is_binary(Binary) ->
