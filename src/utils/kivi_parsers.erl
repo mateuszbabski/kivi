@@ -9,7 +9,8 @@
 -module(kivi_parsers).
 
 -export([parse_datetime/1,
-         parse_to_datetime/1, parse_date/1, parse_time/1]).
+         parse_to_datetime/1
+        ]).
 
 -spec parse_datetime(erlang:datetime()) -> binary().
 parse_datetime({{Year, Month, Day}, {Hours, Minutes, Seconds}}) -> 
@@ -39,9 +40,7 @@ parse_date(Date) ->
 
 %% parse time to tuple
 parse_time(Time) ->
-    % precise to be generic
-    NewTime = string:replace(Time, "Z", "", all),
-    %NewTime = string:substr(Time, 1, 8),
+    NewTime = string:slice(Time, 0, 8),
     SplitTime = string:split(NewTime, ":", all),
     ParsedTime = [list_to_integer(X) || X <- SplitTime],
     list_to_tuple(ParsedTime).
