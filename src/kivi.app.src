@@ -7,7 +7,9 @@
    [kernel,
     stdlib
    ]},
-  {env,[]},
+  {env,[
+        {logger_state, {logger_state, []}}
+    ]},
   {modules, [kivi_app,
              kivi_logger,
              kivi_datetime,
