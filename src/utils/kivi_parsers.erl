@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 27.10.2023
+%% @last_updated: 29.10.2023
 %%
 %% @doc kivi simple key-value database - parsers
 %% @end
@@ -12,6 +12,9 @@
          parse_to_datetime/1,
          parse_date_log/1
         ]).
+
+-type date() :: tuple().
+-type time() :: tuple().
 
 -spec parse_datetime(erlang:datetime()) -> string().
 parse_datetime({{Year, Month, Day}, {Hours, Minutes, Seconds}}) -> 
@@ -31,6 +34,7 @@ parse_to_datetime(String) ->
     transform_datetime_string(String).
 
 %% transform string to datetime
+-spec transform_datetime_string(string()) -> {date(), time()}.
 transform_datetime_string(String) ->
     [H|T] = string:split(String, "T"),
     Date = parse_date(H),
@@ -38,12 +42,14 @@ transform_datetime_string(String) ->
     {Date, Time}.
 
 %% parse date to tuple
+-spec parse_date(date()) -> {date()}.
 parse_date(Date) ->
     SplitDate = string:split(Date, "-", all),
     ParsedDate = [list_to_integer(X) || X <- SplitDate],   
     list_to_tuple(ParsedDate).
 
 %% parse time to tuple
+-spec parse_time(time()) -> {time()}.
 parse_time(Time) ->
     NewTime = string:slice(Time, 0, 8),
     SplitTime = string:split(NewTime, ":", all),

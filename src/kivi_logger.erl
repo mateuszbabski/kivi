@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 28.10.2023
+%% @last_updated: 29.10.2023
 %%
 %% @doc kivi simple key-value database - logger
 %% @end
@@ -18,6 +18,7 @@
 %% API
 %% logger prints message on screen and saves it to dedicated file
 %% start logger - create and open file for logs
+-spec start_logger() -> {ok, map()} | {error, _}.
 start_logger() ->
     LogFile = generate_log_file_name(),
     case file:open(LogFile, [write, append]) of
@@ -30,11 +31,13 @@ start_logger() ->
     end.
 
 %% stop logger - stop and close file for logs
+-spec stop_logger(map()) -> ok.
 stop_logger(#state{log_file = LogFile}) ->
     log(info, "Closing log file"),
     ok = file:close(LogFile).
 
 %% log to the file - inputs are log status and message
+-spec log(atom(), string()) -> ok | {error, no_state} | {error, no_log_file}.
 log(Status, Message) ->
     case application:get_env(kivi, logger_state) of
         undefined ->
@@ -49,6 +52,8 @@ log(Status, Message) ->
             end
     end.
 
+% generate dynamically log file name while starting an app
+-spec generate_log_file_name() -> string().
 generate_log_file_name() ->
     CurrentDateTime = kivi_datetime:get_current_datetime(),
     DateTimeString = kivi_parsers:parse_date_log(CurrentDateTime),
@@ -56,6 +61,8 @@ generate_log_file_name() ->
     FileName = "Kivi" ++ DateTimeString ++ ".txt",
     Directory ++ FileName.
 
+% log message formatter
+-spec format_log_entry(atom(), string()) -> string().
 format_log_entry(Status, Message) ->
     CurrentTime = kivi_datetime:get_current_datetime(),
     ParsedTime = kivi_parsers:parse_datetime(CurrentTime),

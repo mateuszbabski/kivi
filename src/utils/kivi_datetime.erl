@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 27.10.2023
+%% @last_updated: 29.10.2023
 %%
 %% @doc kivi simple key-value database - datetime helper
 %% @end
@@ -10,5 +10,6 @@
 
 -export([get_current_datetime/0]).
 
+-spec get_current_datetime() -> erlang:datetime().
 get_current_datetime() -> 
     erlang:universaltime().
