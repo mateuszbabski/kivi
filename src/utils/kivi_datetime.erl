@@ -13,3 +13,7 @@
 -spec get_current_datetime() -> erlang:datetime().
 get_current_datetime() -> 
     erlang:universaltime().
+
+-spec get_timestamp() -> erlang:timestamp().
+get_timestamp() ->
+    erlang:timestamp().

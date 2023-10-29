@@ -10,7 +10,8 @@
 
 -export([parse_datetime/1,
          parse_to_datetime/1,
-         parse_date_log/1
+         parse_date_log/1,
+         parse_timestamp_to_string/1
         ]).
 
 -type date() :: tuple().
@@ -25,6 +26,11 @@ parse_datetime({{Year, Month, Day}, {Hours, Minutes, Seconds}}) ->
 parse_date_log({{Year, Month, Day}, {Hours, Minutes, Seconds}}) -> 
     Datetime = "~4.10.0B~2.10.0B~2.10.0BT~2.10.0B~2.10.0B~2.10.0B",
     io_lib:format(Datetime, [Year, Month, Day, Hours, Minutes, Seconds]).
+
+-spec parse_timestamp_to_string(erlang:timestamp()) -> string().
+parse_timestamp_to_string(Timestamp) ->
+    DateTime = calendar:now_to_universal_time(Timestamp),
+    parse_datetime(DateTime).
 
 -spec parse_to_datetime(string()) -> erlang:datetime().
 parse_to_datetime(Binary) when is_binary(Binary) ->
