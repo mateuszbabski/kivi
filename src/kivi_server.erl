@@ -32,50 +32,59 @@
 -record(data, {id, value, updated}).
 
 %% start_link
+-spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 start_link() ->
     kivi_logger:log(info, "Starting database server"),
     gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
 %% add_key
+-spec add(Key :: string(), Value :: string()) -> ok | {badargument, string()}.
 add(Key, Value) ->
     LogMessage = io_lib:format("Trying to add to Database - Key: ~s, Value: ~s", [Key, Value]),
     kivi_logger:log(info, LogMessage),
     gen_server:cast({global, ?MODULE}, {add, Key, Value}).
 
 %% update_key
+-spec update(Key :: string(), Value :: string()) -> ok | {badargument, string()}.
 update(Key, Value) ->
     LogMessage = io_lib:format("Trying to update Key: ~s", [Key]),
     kivi_logger:log(info, LogMessage),
     gen_server:cast({global, ?MODULE}, {update, Key, Value}).
 
 %% get_key
+-spec get(Key :: string()) -> map() | binary().
 get(Key) ->
     LogMessage = io_lib:format("Trying to get ~s from Database", [Key]),
     kivi_logger:log(info, LogMessage),
     gen_server:call({global, ?MODULE}, {get, Key}).
 
 %% get_all_keys
+-spec get_all() -> map().
 get_all() ->
     kivi_logger:log(info, "Trying to get all keys from Database"),
     gen_server:call({global, ?MODULE}, {get_all}).
 
 %% delete_key
+-spec delete(Key :: string()) -> ok | {badargument, string()}.
 delete(Key) ->
     LogMessage = io_lib:format("Trying to delete key ~s from Database", [Key]),
     kivi_logger:log(info, LogMessage),
     gen_server:cast({global, ?MODULE}, {delete, Key}).
 
 %% delete_all_keys
+-spec delete_all() -> ok.
 delete_all() ->
     kivi_logger:log(info, "Trying to delete all keys from Database"),
     gen_server:cast({global, ?MODULE}, {delete_all}).
 
 %% get_size
+-spec get_size() -> integer().
 get_size() ->
     kivi_logger:log(info, "Getting number of elements in database"),
     gen_server:call({global, ?MODULE}, {get_size}).
 
 %% sort
+%-spec sort(string()) -> map().
 sort(String) ->
     case string:to_lower(String) of
         "id" ->
@@ -97,10 +106,16 @@ sort(String) ->
 %%=============================================
 
 %% init
+-spec init([]) -> {ok, map()}.
 init([]) ->
     {ok, #{}}.
 
 %% handle_cast
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% -spec handle_cast({atom(), string(), string()}, map()) -> {noreply, State}.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({add, Key, Value}, State) ->
     case maps:is_key(Key, State) of
         true ->
@@ -115,6 +130,11 @@ handle_cast({add, Key, Value}, State) ->
             {noreply, NewState}
     end;
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% -spec handle_cast({atom(), string(), string()}, map()) -> {noreply, map()}.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({update, Key, Value}, State) ->
     case maps:find(Key, State) of
         {ok, Entry} ->
@@ -129,12 +149,22 @@ handle_cast({update, Key, Value}, State) ->
             {noreply, State}
     end;
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% -spec handle_cast({atom(), string()}, map()) -> {noreply, map()}.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({delete, Key}, State) ->
     LogMessage = io_lib:format("Deleting Key: ~s from database", [Key]),
     kivi_logger:log(info, LogMessage),
     NewState = maps:remove(Key, State),
     {noreply, NewState};
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% -spec handle_cast({atom()}, map()) -> {noreply, map()}.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({delete_all}, _State) ->
     kivi_logger:log(info, "Deleting all keys from database~n"),
     NewState = #{},
@@ -151,11 +181,22 @@ handle_call({sort, updated}, _From, State) ->
     kivi_logger:log(info, "Sorted by updated time"),
     {reply, <<"sorted by updated time">>, State};
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% -spec handle_call({atom()}, any(), map()) -> {reply, integer(), map()}.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get_size}, _From, State) ->
     kivi_logger:log(info, "Trying to get size of database"),
     Size = maps:size(State),
     {reply, Size, State};
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% -spec handle_call({atom(), string()}, any(), map()) -> {reply, term(), map()}.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get, Key}, _From, State) ->
     LogMessage = io_lib:format("Trying to get key: ~s from database", [Key]),
     kivi_logger:log(info, LogMessage),
@@ -168,23 +209,33 @@ handle_call({get, Key}, _From, State) ->
             {reply, <<"not found">>, State}
     end;
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% -spec handle_call({atom()}, any(), map()) -> {reply, term(), map()}.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get_all}, _From, State) ->
     kivi_logger:log(info, "Trying to get all keys from database~n"),
     {reply, State, State}.
 
+-spec handle_info(string(), map()) -> {noreply, term()}.
 handle_info(Msg, State) ->
     LogMessage = io_lib:format("Unknown message: ~p~n", [Msg]),
     kivi_logger:log(warn, LogMessage),
     io:format("Unknown message: ~p~n", [Msg]),
     {noreply, State}.
 
+-spec code_change(any(), term(), any()) -> {ok, term()}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-terminate(_Reason, _State) ->
+-spec handle_info(string(), term()) -> ok.
+terminate(Reason, _State) ->
+    kivi_logger:log(error, io_lib:format("Terminated with reason: ~p", [Reason])),
     ok.
 
 %% helpers - simple number generator
+-spec create_id() -> string().
 create_id() ->
     Id = float_to_list(rand:uniform()),
     string:slice(Id, 2, 18).
