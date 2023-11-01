@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 26.10.2023
+%% @last_updated: 01.11.2023
 %%
 %% @doc kivi top level supervisor
 %% @end
@@ -29,10 +29,16 @@ start_link() ->
 %%                  type => worker(),       % optional
 %%                  modules => modules()}   % optional
 init([]) ->
-    SupFlags = #{strategy => one_for_all,
-                 intensity => 0,
-                 period => 1},
-    ChildSpecs = [],
+    SupFlags = #{strategy => one_for_one,
+                 intensity => 5,
+                 period => 10},
+    ChildSpecs = [
+        #{id => server,
+          start => {kivi_server, start_link, []},
+          restart => permanent,
+          shutdown => 50000,
+          type => worker}
+    ],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions

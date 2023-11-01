@@ -11,6 +11,8 @@
         {logger_state, {logger_state, []}}
     ]},
   {modules, [kivi_app,
+             kivi_sup,
+             kivi_server,
              kivi_logger,
              kivi_datetime,
              kivi_parsers]},
