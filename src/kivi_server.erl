@@ -29,7 +29,7 @@
         code_change/3
         ]).
 
--record(entry, {id, value, updated}).
+-record(data, {id, value, updated}).
 
 %% start_link
 start_link() ->
@@ -56,8 +56,7 @@ get(Key) ->
 
 %% get_all_keys
 get_all() ->
-    LogMessage = io:format("Trying to get all keys from Database"),
-    kivi_logger:log(info, LogMessage),
+    kivi_logger:log(info, "Trying to get all keys from Database"),
     gen_server:call({global, ?MODULE}, {get_all}).
 
 %% delete_key
@@ -73,8 +72,7 @@ delete_all() ->
 
 %% get_size
 get_size() ->
-    LogMessage = io:format("Getting number of elements in database~n"),
-    kivi_logger:log(info, LogMessage),
+    kivi_logger:log(info, "Getting number of elements in database"),
     gen_server:call({global, ?MODULE}, {get_size}).
 
 %% sort
@@ -102,16 +100,15 @@ sort(String) ->
 init([]) ->
     {ok, #{}}.
 
-%% handle_cast %% WORK ON DATA STRUCTURE TO KEEP ENTITY
+%% handle_cast
 handle_cast({add, Key, Value}, State) ->
-    io:format("ADDING ~s~n", [Key]),
-    case get_if_exists(Key, State) of
-        {ok, _Entry} ->
+    case maps:is_key(Key, State) of
+        true ->
             LogMessage = io_lib:format("Adding stopped - Key: ~s already exists in database", [Key]),
             kivi_logger:log(error, LogMessage),
             {noreply, State};
         _ ->
-            NewEntry = #entry{id = create_id(), value = Value, updated = kivi_datetime:get_timestamp()},
+            NewEntry = #data{id = create_id(), value = Value, updated = kivi_datetime:get_timestamp()},
             NewState = maps:put(Key, NewEntry, State),
             LogMessage = io_lib:format("Added Key: ~s to database", [Key]),
             kivi_logger:log(info, LogMessage),
@@ -119,9 +116,9 @@ handle_cast({add, Key, Value}, State) ->
     end;
 
 handle_cast({update, Key, Value}, State) ->
-    case get_if_exists(Key, State) of
+    case maps:find(Key, State) of
         {ok, Entry} ->
-            UpdatedEntry = Entry#entry{value = Value, updated = kivi_datetime:get_timestamp()},
+            UpdatedEntry = Entry#data{value = Value, updated = kivi_datetime:get_timestamp()},
             NewState = maps:put(Key, UpdatedEntry, State),
             LogMessage = io_lib:format("Updated Key: ~s to database", [Key]),
             kivi_logger:log(info, LogMessage),
@@ -145,17 +142,14 @@ handle_cast({delete_all}, _State) ->
 
 %% handle_call
 handle_call({sort, id}, _From, State) ->
-    Message = io:format("Sorted by id"),
     kivi_logger:log(info, "Sorted by id"),
-    {reply, Message, State};
+    {reply, <<"sorted by id">>, State};
 handle_call({sort, key}, _From, State) ->
-    Message = io:format("Sorted by key"),
     kivi_logger:log(info, "Sorted by key"),
-    {reply, Message, State};
+    {reply, <<"sorted by key">>, State};
 handle_call({sort, updated}, _From, State) ->
-    Message = io:format("Sorted by updated time"),
     kivi_logger:log(info, "Sorted by updated time"),
-    {reply, Message, State};
+    {reply, <<"sorted by updated time">>, State};
 
 handle_call({get_size}, _From, State) ->
     kivi_logger:log(info, "Trying to get size of database"),
@@ -165,13 +159,18 @@ handle_call({get_size}, _From, State) ->
 handle_call({get, Key}, _From, State) ->
     LogMessage = io_lib:format("Trying to get key: ~s from database", [Key]),
     kivi_logger:log(info, LogMessage),
-    Size = maps:size(State),
-    {reply, Size, State};
+
+    case maps:find(Key, State) of
+        {ok, Entry} -> 
+            {reply, Entry, State};
+        error -> 
+            kivi_logger:log(info, "Key not found"),
+            {reply, <<"not found">>, State}
+    end;
 
 handle_call({get_all}, _From, State) ->
-    kivi_logger:log(info, "Trying to get all keys from database"),
-    Size = maps:size(State),
-    {reply, Size, State}.
+    kivi_logger:log(info, "Trying to get all keys from database~n"),
+    {reply, State, State}.
 
 handle_info(Msg, State) ->
     LogMessage = io_lib:format("Unknown message: ~p~n", [Msg]),
@@ -189,11 +188,3 @@ terminate(_Reason, _State) ->
 create_id() ->
     Id = float_to_list(rand:uniform()),
     string:slice(Id, 2, 18).
-
-get_if_exists(Key, Map) ->
-    case maps:iskey(Key, Map) of
-        true ->
-            maps:get(Key, Map);
-        _ ->
-            <<"not found">>
-    end.
