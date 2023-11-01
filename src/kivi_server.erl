@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 31.10.2023
+%% @last_updated: 01.11.2023
 %%
 %% @doc kivi simple key-value database - server side module
 %% @end
@@ -10,9 +10,7 @@
 
 -behaviour(gen_server).
 
--export([
-        start_link/0,
-        init/0,
+-export([start_link/0,
         add/2,
         update/2,
         get/1,
@@ -23,63 +21,77 @@
         sort/1
         ]).
 
--record(entry, {id, key, value, updated}).
+-export([init/1, 
+        terminate/2, 
+        handle_info/2, 
+        handle_cast/2, 
+        handle_call/3, 
+        code_change/3
+        ]).
+
+-record(entry, {id, value, updated}).
 
 %% start_link
 start_link() ->
     kivi_logger:log(info, "Starting database server"),
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], [])
+    gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
 %% add_key
 add(Key, Value) ->
-    kivi:logger:log(info, "Trying to add to Database - Key: ~s, Value: ~s", [Key, Value]),
-    gen_server:cast({local, ?MODULE}, {add, Key, Value}).
+    LogMessage = io_lib:format("Trying to add to Database - Key: ~s, Value: ~s", [Key, Value]),
+    kivi_logger:log(info, LogMessage),
+    gen_server:cast({global, ?MODULE}, {add, Key, Value}).
 
 %% update_key
 update(Key, Value) ->
-    kivi_logger:log(info, "Trying to update Key: ~s", [Key]),
-    gen_server:cast({local, ?MODULE}, {update, Key, Value}).
+    LogMessage = io_lib:format("Trying to update Key: ~s", [Key]),
+    kivi_logger:log(info, LogMessage),
+    gen_server:cast({global, ?MODULE}, {update, Key, Value}).
 
 %% get_key
 get(Key) ->
-    kivi_logger:log(info, "Trying to get ~s from Database", [Key]),
-    gen_server:call({local, ?MODULE}, {get, Key}).
+    LogMessage = io_lib:format("Trying to get ~s from Database", [Key]),
+    kivi_logger:log(info, LogMessage),
+    gen_server:call({global, ?MODULE}, {get, Key}).
 
 %% get_all_keys
 get_all() ->
-    kivi_logger:log(info, "Trying to get all keys from Database"),
-    gen_server:call({local, ?MODULE}, {get_all}).
+    LogMessage = io:format("Trying to get all keys from Database"),
+    kivi_logger:log(info, LogMessage),
+    gen_server:call({global, ?MODULE}, {get_all}).
 
 %% delete_key
 delete(Key) ->
-    kivi_logger:log(info, "Trying to delete key from Database"),
-    gen_server:cast({local, ?MODULE}, {delete, Key}).
+    LogMessage = io_lib:format("Trying to delete key ~s from Database", [Key]),
+    kivi_logger:log(info, LogMessage),
+    gen_server:cast({global, ?MODULE}, {delete, Key}).
 
 %% delete_all_keys
 delete_all() ->
     kivi_logger:log(info, "Trying to delete all keys from Database"),
-    gen_server:cast({local, ?MODULE}, {delete_all}).
+    gen_server:cast({global, ?MODULE}, {delete_all}).
 
 %% get_size
 get_size() ->
-    kivi_logger:log(info, "Getting number of elements in database"),
-    gen_server:call({local, ?MODULE}, {get_size}).
+    LogMessage = io:format("Getting number of elements in database~n"),
+    kivi_logger:log(info, LogMessage),
+    gen_server:call({global, ?MODULE}, {get_size}).
 
 %% sort
 sort(String) ->
     case string:to_lower(String) of
         "id" ->
             kivi_logger:log(info, "Sorting by id and returning list of keys from database"),
-            gen_server:call({local, ?MODULE}, {sort, Id});
+            gen_server:call({global, ?MODULE}, {sort, id});
         "key" ->
             kivi_logger:log(info, "Sorting by key and returning list of keys from database"),
-            gen_server:call({local, ?MODULE}, {sort, Key});
+            gen_server:call({global, ?MODULE}, {sort, key});
         "updated" ->
             kivi_logger:log(info, "Sorting by updated time and returning list of keys from database"),
-            gen_server:call({local, ?MODULE}, {sort, Updated});
+            gen_server:call({global, ?MODULE}, {sort, updated});
         _ ->
             kivi_logger:log(error, "Invalid sorting value - returning list of keys without sorting"),
-            gen_server:call({local, ?MODULE}, {get_all})
+            gen_server:call({global, ?MODULE}, {get_all})
     end.
 
 %%=============================================
@@ -87,62 +99,101 @@ sort(String) ->
 %%=============================================
 
 %% init
-init() ->
+init([]) ->
     {ok, #{}}.
 
-%% handle_cast 
+%% handle_cast %% WORK ON DATA STRUCTURE TO KEEP ENTITY
 handle_cast({add, Key, Value}, State) ->
-    case get_if_exists(Key, State) ->
-        {ok, _} ->
-            kivi_logger:log(error, "Adding stopped - Key: ~s already exists in database", [Key]),
+    io:format("ADDING ~s~n", [Key]),
+    case get_if_exists(Key, State) of
+        {ok, _Entry} ->
+            LogMessage = io_lib:format("Adding stopped - Key: ~s already exists in database", [Key]),
+            kivi_logger:log(error, LogMessage),
             {noreply, State};
         _ ->
-            Id = create_id(),
-            Timestamp = kivi_datetime:get_timestamp(),
-            NewState = maps:put(Id, Key, Value, Timestamp),
+            NewEntry = #entry{id = create_id(), value = Value, updated = kivi_datetime:get_timestamp()},
+            NewState = maps:put(Key, NewEntry, State),
+            LogMessage = io_lib:format("Added Key: ~s to database", [Key]),
+            kivi_logger:log(info, LogMessage),
             {noreply, NewState}
-    end.
+    end;
 
 handle_cast({update, Key, Value}, State) ->
     case get_if_exists(Key, State) of
         {ok, Entry} ->
             UpdatedEntry = Entry#entry{value = Value, updated = kivi_datetime:get_timestamp()},
             NewState = maps:put(Key, UpdatedEntry, State),
+            LogMessage = io_lib:format("Updated Key: ~s to database", [Key]),
+            kivi_logger:log(info, LogMessage),
             {noreply, NewState};
-        {error, not_found} ->
-            kivi_logger:log(error, "Updating stopped - Key: ~s doesn't exist", [Key]),
+        _ ->
+            LogMessage = io_lib:format("Updating stopped - Key: ~s doesn't exist", [Key]),
+            kivi_logger:log(error, LogMessage),
             {noreply, State}
-    end.
+    end;
 
 handle_cast({delete, Key}, State) ->
-    kivi_logger:log(info, "Trying to remove key: ~s from Database", [Key]),
+    LogMessage = io_lib:format("Deleting Key: ~s from database", [Key]),
+    kivi_logger:log(info, LogMessage),
     NewState = maps:remove(Key, State),
-    {noreply, NewState}.
+    {noreply, NewState};
 
-handle_cast({delete_all}, State) ->
-    kivi_logger:log(info, "Trying to clear database"),
+handle_cast({delete_all}, _State) ->
+    kivi_logger:log(info, "Deleting all keys from database~n"),
     NewState = #{},
     {noreply, NewState}.
+
+%% handle_call
+handle_call({sort, id}, _From, State) ->
+    Message = io:format("Sorted by id"),
+    kivi_logger:log(info, "Sorted by id"),
+    {reply, Message, State};
+handle_call({sort, key}, _From, State) ->
+    Message = io:format("Sorted by key"),
+    kivi_logger:log(info, "Sorted by key"),
+    {reply, Message, State};
+handle_call({sort, updated}, _From, State) ->
+    Message = io:format("Sorted by updated time"),
+    kivi_logger:log(info, "Sorted by updated time"),
+    {reply, Message, State};
 
 handle_call({get_size}, _From, State) ->
     kivi_logger:log(info, "Trying to get size of database"),
     Size = maps:size(State),
+    {reply, Size, State};
+
+handle_call({get, Key}, _From, State) ->
+    LogMessage = io_lib:format("Trying to get key: ~s from database", [Key]),
+    kivi_logger:log(info, LogMessage),
+    Size = maps:size(State),
+    {reply, Size, State};
+
+handle_call({get_all}, _From, State) ->
+    kivi_logger:log(info, "Trying to get all keys from database"),
+    Size = maps:size(State),
     {reply, Size, State}.
 
-%% handle_call
-handle_call({}, From, State) ->
+handle_info(Msg, State) ->
+    LogMessage = io_lib:format("Unknown message: ~p~n", [Msg]),
+    kivi_logger:log(warn, LogMessage),
+    io:format("Unknown message: ~p~n", [Msg]),
+    {noreply, State}.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
+terminate(_Reason, _State) ->
+    ok.
 
 %% helpers - simple number generator
 create_id() ->
-    Id = float_to_list(random:uniform()),
+    Id = float_to_list(rand:uniform()),
     string:slice(Id, 2, 18).
 
 get_if_exists(Key, Map) ->
-    case maps:is_key(Key, Map) of
+    case maps:iskey(Key, Map) of
         true ->
-            {ok, Entry} = maps:get(Key, Map),
-            Entry;
+            maps:get(Key, Map);
         _ ->
-            {error, not_found}
+            <<"not found">>
     end.
-%%
