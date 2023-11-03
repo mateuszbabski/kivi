@@ -1,0 +1,29 @@
+%%%-------------------------------------------------------------------
+%% @author: Mateusz Babski
+%% @last_updated: 03.11.2023
+%%
+%% @doc kivi simple key-value database - sorter
+%% @end
+%%%-------------------------------------------------------------------
+
+-module(kivi_sorter).
+
+-include("data.hrl").
+
+-export([sort_data/2
+        ]).
+
+-spec sort_data(map(), string()) -> map().
+sort_data(#{}, _SortingBy) -> #{};
+sort_data(DataMap, SortingBy) ->
+    case string:to_lower(SortingBy) of
+        "key" -> sort_by_key();
+        "id" -> sort_by_id();
+        "updated" -> sort_by_updated();
+        "value" -> sort_by_value();
+        _ -> DataMap
+    end.
+
+%CHOOSE SORTING ALGORITHM
+%CHOOSE IF IT SHOULD RETURN MAP OR list
+% 

@@ -158,7 +158,7 @@ handle_cast({delete_all}, _State) ->
     NewState = #{},
     {noreply, NewState}.
 
-%% handle_call IT LEAVES FOR FILL
+%% handle_call
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 %%% -spec handle_call({atom()}, string()) -> {reply, term(), term()}.
