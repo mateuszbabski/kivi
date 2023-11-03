@@ -170,7 +170,7 @@ handle_cast({delete_all}, _State) ->
     NewState = #{},
     {noreply, NewState}.
 
-%% handle_call
+%% handle_call IT LEAVES FOR FILL
 handle_call({sort, id}, _From, State) ->
     kivi_logger:log(info, "Sorted by id"),
     {reply, <<"sorted by id">>, State};
@@ -229,7 +229,7 @@ handle_info(Msg, State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
--spec handle_info(string(), term()) -> ok.
+-spec terminate(string(), term()) -> ok.
 terminate(Reason, _State) ->
     kivi_logger:log(error, io_lib:format("Terminated with reason: ~p", [Reason])),
     ok.
