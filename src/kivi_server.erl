@@ -1,12 +1,14 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 01.11.2023
+%% @last_updated: 03.11.2023
 %%
 %% @doc kivi simple key-value database - server side module
 %% @end
 %%%-------------------------------------------------------------------
 
 -module(kivi_server).
+
+-include("data.hrl").
 
 -behaviour(gen_server).
 
@@ -28,8 +30,6 @@
         handle_call/3, 
         code_change/3
         ]).
-
--record(data, {id, value, updated}).
 
 %% start_link
 -spec start_link() -> {ok, pid()} | ignore | {error, term()}.
@@ -84,22 +84,10 @@ get_size() ->
     gen_server:call({global, ?MODULE}, {get_size}).
 
 %% sort
-%-spec sort(string()) -> map().
+-spec sort(string()) -> term().
 sort(String) ->
-    case string:to_lower(String) of
-        "id" ->
-            kivi_logger:log(info, "Sorting by id and returning list of keys from database"),
-            gen_server:call({global, ?MODULE}, {sort, id});
-        "key" ->
-            kivi_logger:log(info, "Sorting by key and returning list of keys from database"),
-            gen_server:call({global, ?MODULE}, {sort, key});
-        "updated" ->
-            kivi_logger:log(info, "Sorting by updated time and returning list of keys from database"),
-            gen_server:call({global, ?MODULE}, {sort, updated});
-        _ ->
-            kivi_logger:log(error, "Invalid sorting value - returning list of keys without sorting"),
-            gen_server:call({global, ?MODULE}, {get_all})
-    end.
+    kivi_logger:log(info, "Trying to sort by ~s and returning list of sorted keys from database", [String]),
+    gen_server:call({global, ?MODULE}, {sort, String});
 
 %%=============================================
 %%                  Callbacks
@@ -171,15 +159,15 @@ handle_cast({delete_all}, _State) ->
     {noreply, NewState}.
 
 %% handle_call IT LEAVES FOR FILL
-handle_call({sort, id}, _From, State) ->
-    kivi_logger:log(info, "Sorted by id"),
-    {reply, <<"sorted by id">>, State};
-handle_call({sort, key}, _From, State) ->
-    kivi_logger:log(info, "Sorted by key"),
-    {reply, <<"sorted by key">>, State};
-handle_call({sort, updated}, _From, State) ->
-    kivi_logger:log(info, "Sorted by updated time"),
-    {reply, <<"sorted by updated time">>, State};
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% -spec handle_call({atom()}, string()) -> {reply, term(), term()}.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+handle_call({sort, SortingBy}, _From, State) ->
+    kivi_logger:log(info, "Sorted by ~s", [SortingBy]),
+    SortedData = kivi_sorter:sort_data(State, SortingBy),
+    {reply, SortedData, State};
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
