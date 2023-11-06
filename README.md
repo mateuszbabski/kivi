@@ -1,9 +1,11 @@
-kivi
-=====
+# kivi
 
 An OTP application
 
-Build
------
+## Build
 
     $ rebar3 compile
+
+## Test
+
+    $ rebar3 eunit --dir="test"
