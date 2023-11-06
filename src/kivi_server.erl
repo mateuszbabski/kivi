@@ -87,7 +87,7 @@ get_size() ->
 -spec sort(string()) -> term().
 sort(String) ->
     kivi_logger:log(info, "Trying to sort by ~s and returning list of sorted keys from database", [String]),
-    gen_server:call({global, ?MODULE}, {sort, String});
+    gen_server:call({global, ?MODULE}, {sort, String}).
 
 %%=============================================
 %%                  Callbacks
