@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 03.11.2023
+%% @last_updated: 07.11.2023
 %%
 %% @doc kivi simple key-value database - server side module
 %% @end
@@ -34,8 +34,67 @@
 %% start_link
 -spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 start_link() ->
-    kivi_logger:log(info, "Starting database server"),
-    gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
+    kivi_logger:log(info, "Starting database server.."), 
+    {ok, Pid} = gen_server:start_link({global, ?MODULE}, ?MODULE, [], []),
+    LogMessage = io_lib:format("Database server PID: ~p", [Pid]),
+    kivi_logger:log(info, LogMessage),
+    register(dbserver, Pid),
+    loop(Pid),
+    {ok, Pid}.
+
+%% probably add/update/get functions can be moved to clients module
+%% how to invoke gen_server - {global, ?module} or PID?? !!
+
+ loop(Pid) ->
+  LogMessage = io_lib:format("loop starts pid ~p", [Pid]),
+  kivi_logger:log(warn, LogMessage),
+  receive
+      {FromPid, {add, Key, Value}} ->
+          LogMessage = io_lib:format("Got message from PID: ~p", [FromPid]),
+          kivi_logger:log(warn, LogMessage),
+          {noreply, NewState} = gen_server:cast(Pid, {add, Key, Value}),
+          FromPid ! {Pid, {response, add, ok}},
+          loop(Pid);     
+
+      {FromPid, {update, Key, Value}} ->
+          {noreply, NewState} = gen_server:cast(Pid, {update, Key, Value}),
+          FromPid ! {Pid, {response, update, ok}},
+          loop(Pid);        
+
+      {FromPid, {get, Key}} ->
+          {reply, Entry, NewState} = gen_server:call(Pid, {get, Key}),
+          FromPid ! {Pid, {response, get, Entry}},
+          loop(Pid);   
+ 
+      {FromPid, {get_all}} ->
+          {reply, List, NewState} = gen_server:call(Pid, {get_all}),
+          FromPid ! {Pid, {response, get_all, List}},
+          loop(Pid);   
+
+      {FromPid, {get_size}} ->
+          {reply, Size, NewState} = gen_server:call(Pid, {get_size}),
+          FromPid ! {Pid, {response, get_size, Size}},
+          loop(Pid);   
+ 
+      {FromPid, {sort, SortingBy}} ->
+          {reply, SortedList, NewState} = gen_server:call(Pid, {sort, SortingBy}),
+          FromPid ! {Pid, {response, sort, SortedList}},
+          loop(Pid);   
+
+      {FromPid, {delete, Key}} ->
+          {noreply, NewState} = gen_server:cast(Pid, {delete, Key}),
+          FromPid ! {Pid, {response, delete, ok}},
+          loop(Pid);   
+ 
+      {FromPid, {delete_all}} ->
+          {noreply, NewState} = gen_server:cast(Pid, {delete_all}),
+          FromPid ! {Pid, {response, delete_all, ok}},
+          loop(Pid);
+
+      _ ->
+          loop(Pid)
+    end.      
+%% possibly add stop/terminate and unhandled
 
 %% add_key
 -spec add(Key :: string(), Value :: string()) -> ok | {badargument, string()}.
@@ -227,3 +286,4 @@ terminate(Reason, _State) ->
 create_id() ->
     Id = float_to_list(rand:uniform()),
     string:slice(Id, 2, 18).
+    %list_to_integer(string:slice(Id, 2, 18).
