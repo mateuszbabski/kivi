@@ -13,8 +13,10 @@
   {modules, [kivi_app,
              kivi_sup,
              kivi_server,
+             kivi_client,
              kivi_logger,
              kivi_datetime,
+             kivi_sorter,
              kivi_parsers]},
 
   {licenses, ["Apache-2.0"]},
