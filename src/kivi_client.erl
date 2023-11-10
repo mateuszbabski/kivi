@@ -9,6 +9,8 @@
 
 -module(kivi_client).
 
+-export([start_link/0]).
+
 -export([add/2,
         update/2,
         get/1,
@@ -18,7 +20,34 @@
         get_size/0,
         sort/1
         ]).
- 
+
+-spec start_link() -> {ok, pid()} | ignore | {error, term()}.
+start_link() ->
+    Pid = spawn_link(fun() -> loop() end),
+    register(client, Pid),
+    {ok, Pid}.
+
+%%start() ->
+  %%  Pid = spawn(fun() -> loop() end),
+    %%register(client, Pid),
+    %%Pid.
+
+%% add cases to loop
+loop() ->
+    receive
+        {noreply, _State} -> 
+            kivi_logger:log(warn, "ADD OK"),
+            loop();
+
+        {add, ok} -> 
+            kivi_logger:log(warn, "ADD OK"),
+            loop();
+
+        _ -> 
+            kivi_logger:log(warn, "NOT OK"),
+            loop()
+    end.
+
 -spec add(Key :: string(), Value :: string()) -> ok | {badargument, string()}.
 add(Key, Value) ->
     LogMessage = io_lib:format("Trying to add to Database - Key: ~s, Value: ~s", [Key, Value]),
