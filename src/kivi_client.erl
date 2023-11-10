@@ -27,24 +27,46 @@ start_link() ->
     register(client, Pid),
     {ok, Pid}.
 
-%%start() ->
-  %%  Pid = spawn(fun() -> loop() end),
-    %%register(client, Pid),
-    %%Pid.
-
 %% add cases to loop
+%% move logger additions to loop (cause they need to be processed after ok)
+%% add operations on data in the loop
+
 loop() ->
     receive
-        {noreply, _State} -> 
+        {add, ok, NewEntry} -> 
             kivi_logger:log(warn, "ADD OK"),
             loop();
 
-        {add, ok} -> 
-            kivi_logger:log(warn, "ADD OK"),
+        {add, error} -> 
+            kivi_logger:log(warn, "ADD NOT OK"),
+            loop();
+
+        {update, ok, UpdatedEntry} ->
+            kivi_logger:log(warn, "UPDATE OK"),
+            loop();
+
+        {update, error} ->
+            kivi_logger:log(warn, "UPDATE NOT OK"),
+            loop();
+
+        {delete, ok, Key} ->
+            kivi_logger:log(warn, "DELETED"),
+            loop();
+
+        {delete_all, ok} ->
+            kivi_logger:log(warn, "DELETED ALL"),
+            loop();
+
+        {sort, ok, SortedData} ->
+            kivi_logger:log(warn, "SORTED"),
+            loop();
+
+        {get_size, ok, Size} ->
+            kivi_logger:log(warn, "SIZED"),
             loop();
 
         _ -> 
-            kivi_logger:log(warn, "NOT OK"),
+            kivi_logger:log(warn, "unhandled response"),
             loop()
     end.
 
@@ -91,8 +113,8 @@ delete(Key) ->
 delete_all() ->
     kivi_logger:log(info, "Trying to delete all keys from Database"),
     gen_server:cast({global, kivi_server}, {delete_all}),
-    io:format("Delete_all operation ok\n"),
-    kivi_logger:log(info, "Delete_all operation ok").
+    kivi_logger:log(info, "Delete_all operation ok"),
+    io:format("Delete_all operation ok\n").
 
 -spec get_size() -> integer().
 get_size() ->

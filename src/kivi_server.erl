@@ -28,9 +28,9 @@
 start_link() ->
     kivi_logger:log(info, "Starting database server.."), 
     {ok, Pid} = gen_server:start_link({global, ?MODULE}, ?MODULE, [], []),
-    ServerPid = self(),
-    LogMessage = io_lib:format("Database server PID: ~p, SELF: ~p", [Pid, ServerPid]),
+    LogMessage = io_lib:format("Database server PID: ~p", [Pid]),
     kivi_logger:log(info, LogMessage),
+
     register(dbserver, Pid),
     {ok, Pid}.
 
@@ -50,16 +50,21 @@ init([]) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({add, Key, Value}, State) ->
+    ClientPid = whereis(client),
+
     case maps:is_key(Key, State) of
         true ->
             LogMessage = io_lib:format("Adding stopped - Key: ~s already exists in database", [Key]),
             kivi_logger:log(error, LogMessage),
+            ClientPid ! {add, error},
             {noreply, State};
+
         _ ->
             NewEntry = #data{id = create_id(), value = Value, updated = kivi_datetime:get_timestamp()},
             NewState = maps:put(Key, NewEntry, State),
             LogMessage = io_lib:format("Added Key: ~s to database", [Key]),
             kivi_logger:log(info, LogMessage),
+            ClientPid ! {add, ok, NewEntry},
             {noreply, NewState}
     end;
 
@@ -69,16 +74,21 @@ handle_cast({add, Key, Value}, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({update, Key, Value}, State) ->
+    ClientPid = whereis(client),
+
     case maps:find(Key, State) of
         {ok, Entry} ->
             UpdatedEntry = Entry#data{value = Value, updated = kivi_datetime:get_timestamp()},
             NewState = maps:put(Key, UpdatedEntry, State),
             LogMessage = io_lib:format("Updated Key: ~s to database", [Key]),
             kivi_logger:log(info, LogMessage),
+            ClientPid ! {update, ok, UpdatedEntry},
             {noreply, NewState};
+
         _ ->
             LogMessage = io_lib:format("Updating stopped - Key: ~s doesn't exist", [Key]),
             kivi_logger:log(error, LogMessage),
+            ClientPid ! {update, error},
             {noreply, State}
     end;
 
@@ -88,9 +98,12 @@ handle_cast({update, Key, Value}, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({delete, Key}, State) ->
+    ClientPid = whereis(client),    
     LogMessage = io_lib:format("Deleting Key: ~s from database", [Key]),
     kivi_logger:log(info, LogMessage),
+
     NewState = maps:remove(Key, State),
+    ClientPid ! {delete, ok, Key},
     {noreply, NewState};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -99,8 +112,11 @@ handle_cast({delete, Key}, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({delete_all}, _State) ->
+    ClientPid = whereis(client),
     kivi_logger:log(info, "Deleting all keys Client database"),
+
     NewState = #{},
+    ClientPid ! {delete_all, ok},
     {noreply, NewState}.
 
 %% handle_call
@@ -110,8 +126,11 @@ handle_cast({delete_all}, _State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({sort, SortingBy}, _From, State) ->
+    ClientPid = whereis(client),
     kivi_logger:log(info, "Sorted by ~s", [SortingBy]),
+
     SortedData = kivi_sorter:sort_data(State, SortingBy),
+    ClientPid ! {sort, ok, SortedData},
     {reply, SortedData, State};
 
 
@@ -121,8 +140,11 @@ handle_call({sort, SortingBy}, _From, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get_size}, _From, State) ->
+    ClientPid = whereis(client),
     kivi_logger:log(info, "Trying to get size of database"),
+
     Size = maps:size(State),
+    ClientPid ! {get_size, ok, Size},
     {reply, Size, State};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -131,12 +153,14 @@ handle_call({get_size}, _From, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get, Key}, _From, State) ->
+    ClientPid = whereis(client),
     LogMessage = io_lib:format("Trying to get key: ~s from database", [Key]),
     kivi_logger:log(info, LogMessage),
 
     case maps:find(Key, State) of
         {ok, Entry} -> 
             {reply, Entry, State};
+
         error -> 
             kivi_logger:log(info, "Key not found"),
             {reply, <<"not found">>, State}
@@ -148,7 +172,9 @@ handle_call({get, Key}, _From, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get_all}, _From, State) ->
+    ClientPid = whereis(client),
     kivi_logger:log(info, "Trying to get all keys from database"),
+
     {reply, State, State}.
 
 -spec handle_info(string(), map()) -> {noreply, term()}.
