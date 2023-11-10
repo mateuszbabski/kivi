@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 07.11.2023
+%% @last_updated: 10.11.2023
 %%
 %% @doc kivi simple key-value database - server side module
 %% @end
@@ -12,15 +12,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/0,
-        add/2,
-        update/2,
-        get/1,
-        get_all/0,
-        delete/1,
-        delete_all/0,
-        get_size/0,
-        sort/1
+-export([start_link/0        
         ]).
 
 -export([init/1, 
@@ -36,117 +28,11 @@
 start_link() ->
     kivi_logger:log(info, "Starting database server.."), 
     {ok, Pid} = gen_server:start_link({global, ?MODULE}, ?MODULE, [], []),
-    LogMessage = io_lib:format("Database server PID: ~p", [Pid]),
+    ServerPid = self(),
+    LogMessage = io_lib:format("Database server PID: ~p, SELF: ~p", [Pid, ServerPid]),
     kivi_logger:log(info, LogMessage),
     register(dbserver, Pid),
-    loop(Pid),
     {ok, Pid}.
-
-%% probably add/update/get functions can be moved to clients module
-%% how to invoke gen_server - {global, ?module} or PID?? !!
-
- loop(Pid) ->
-  LogMessage = io_lib:format("loop starts pid ~p", [Pid]),
-  kivi_logger:log(warn, LogMessage),
-  receive
-      {FromPid, {add, Key, Value}} ->
-          LogMessage = io_lib:format("Got message from PID: ~p", [FromPid]),
-          kivi_logger:log(warn, LogMessage),
-          {noreply, NewState} = gen_server:cast(Pid, {add, Key, Value}),
-          FromPid ! {Pid, {response, add, ok}},
-          loop(Pid);     
-
-      {FromPid, {update, Key, Value}} ->
-          {noreply, NewState} = gen_server:cast(Pid, {update, Key, Value}),
-          FromPid ! {Pid, {response, update, ok}},
-          loop(Pid);        
-
-      {FromPid, {get, Key}} ->
-          {reply, Entry, NewState} = gen_server:call(Pid, {get, Key}),
-          FromPid ! {Pid, {response, get, Entry}},
-          loop(Pid);   
- 
-      {FromPid, {get_all}} ->
-          {reply, List, NewState} = gen_server:call(Pid, {get_all}),
-          FromPid ! {Pid, {response, get_all, List}},
-          loop(Pid);   
-
-      {FromPid, {get_size}} ->
-          {reply, Size, NewState} = gen_server:call(Pid, {get_size}),
-          FromPid ! {Pid, {response, get_size, Size}},
-          loop(Pid);   
- 
-      {FromPid, {sort, SortingBy}} ->
-          {reply, SortedList, NewState} = gen_server:call(Pid, {sort, SortingBy}),
-          FromPid ! {Pid, {response, sort, SortedList}},
-          loop(Pid);   
-
-      {FromPid, {delete, Key}} ->
-          {noreply, NewState} = gen_server:cast(Pid, {delete, Key}),
-          FromPid ! {Pid, {response, delete, ok}},
-          loop(Pid);   
- 
-      {FromPid, {delete_all}} ->
-          {noreply, NewState} = gen_server:cast(Pid, {delete_all}),
-          FromPid ! {Pid, {response, delete_all, ok}},
-          loop(Pid);
-
-      _ ->
-          loop(Pid)
-    end.      
-%% possibly add stop/terminate and unhandled
-
-%% add_key
--spec add(Key :: string(), Value :: string()) -> ok | {badargument, string()}.
-add(Key, Value) ->
-    LogMessage = io_lib:format("Trying to add to Database - Key: ~s, Value: ~s", [Key, Value]),
-    kivi_logger:log(info, LogMessage),
-    gen_server:cast({global, ?MODULE}, {add, Key, Value}).
-
-%% update_key
--spec update(Key :: string(), Value :: string()) -> ok | {badargument, string()}.
-update(Key, Value) ->
-    LogMessage = io_lib:format("Trying to update Key: ~s", [Key]),
-    kivi_logger:log(info, LogMessage),
-    gen_server:cast({global, ?MODULE}, {update, Key, Value}).
-
-%% get_key
--spec get(Key :: string()) -> map() | binary().
-get(Key) ->
-    LogMessage = io_lib:format("Trying to get ~s from Database", [Key]),
-    kivi_logger:log(info, LogMessage),
-    gen_server:call({global, ?MODULE}, {get, Key}).
-
-%% get_all_keys
--spec get_all() -> map().
-get_all() ->
-    kivi_logger:log(info, "Trying to get all keys from Database"),
-    gen_server:call({global, ?MODULE}, {get_all}).
-
-%% delete_key
--spec delete(Key :: string()) -> ok | {badargument, string()}.
-delete(Key) ->
-    LogMessage = io_lib:format("Trying to delete key ~s from Database", [Key]),
-    kivi_logger:log(info, LogMessage),
-    gen_server:cast({global, ?MODULE}, {delete, Key}).
-
-%% delete_all_keys
--spec delete_all() -> ok.
-delete_all() ->
-    kivi_logger:log(info, "Trying to delete all keys from Database"),
-    gen_server:cast({global, ?MODULE}, {delete_all}).
-
-%% get_size
--spec get_size() -> integer().
-get_size() ->
-    kivi_logger:log(info, "Getting number of elements in database"),
-    gen_server:call({global, ?MODULE}, {get_size}).
-
-%% sort
--spec sort(string()) -> term().
-sort(String) ->
-    kivi_logger:log(info, "Trying to sort by ~s and returning list of sorted keys from database", [String]),
-    gen_server:call({global, ?MODULE}, {sort, String}).
 
 %%=============================================
 %%                  Callbacks
@@ -213,7 +99,7 @@ handle_cast({delete, Key}, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({delete_all}, _State) ->
-    kivi_logger:log(info, "Deleting all keys from database~n"),
+    kivi_logger:log(info, "Deleting all keys Client database"),
     NewState = #{},
     {noreply, NewState}.
 
@@ -262,7 +148,7 @@ handle_call({get, Key}, _From, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get_all}, _From, State) ->
-    kivi_logger:log(info, "Trying to get all keys from database~n"),
+    kivi_logger:log(info, "Trying to get all keys from database"),
     {reply, State, State}.
 
 -spec handle_info(string(), map()) -> {noreply, term()}.

@@ -37,7 +37,7 @@ init([]) ->
           start => {kivi_server, start_link, []},
           restart => permanent,
           shutdown => 50000,
-          type => worker}
+          type => worker}        
     ],
     {ok, {SupFlags, ChildSpecs}}.
 
