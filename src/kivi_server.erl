@@ -46,7 +46,7 @@ init([]) ->
 %% handle_cast
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
-%%% -spec handle_cast({atom(), string(), string()}, map()) -> {noreply, State}.
+%%% -spec handle_cast({atom(), string(), string()}, map()) -> {noreply, map()}.
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({add, Key, Value}, State) ->
