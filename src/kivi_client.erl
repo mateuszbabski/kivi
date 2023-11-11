@@ -27,10 +27,6 @@ start_link() ->
     register(client, Pid),
     {ok, Pid}.
 
-%% add cases to loop
-%% move logger additions to loop (cause they need to be processed after ok)
-%% add operations on data in the loop
-
 loop() ->
     receive
         {add, ok, _NewEntry} ->
@@ -49,7 +45,7 @@ loop() ->
             kivi_logger:log(error, "Updating key failed - Key doesn't exist in database."),
             loop();
 
-        {get, ok, _Key} ->
+        {get, ok, _Entry} ->
             kivi_logger:log(info, "Key returned successfully."),
             loop();
 
@@ -58,7 +54,7 @@ loop() ->
             loop();
 
         {get_all, ok, _List} ->
-            kivi_logger:log(info, "Keys returned successfully."),
+            kivi_logger:log(info, "List returned successfully."),
             loop();
 
         {delete, ok, _Key} ->
