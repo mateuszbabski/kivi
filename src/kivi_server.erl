@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 10.11.2023
+%% @last_updated: 11.11.2023
 %%
 %% @doc kivi simple key-value database - server side module
 %% @end
@@ -127,7 +127,8 @@ handle_cast({delete_all}, _State) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({sort, SortingBy}, _From, State) ->
     ClientPid = whereis(client),
-    kivi_logger:log(info, "Sorted by ~s", [SortingBy]),
+    LogMessage = io_lib:format("Sorted by ~s", [SortingBy]),
+    kivi_logger:log(info, LogMessage),
 
     SortedData = kivi_sorter:sort_data(State, SortingBy),
     ClientPid ! {sort, ok, SortedData},
@@ -159,10 +160,12 @@ handle_call({get, Key}, _From, State) ->
 
     case maps:find(Key, State) of
         {ok, Entry} -> 
+            ClientPid ! {get, ok, Entry},
             {reply, Entry, State};
 
         error -> 
             kivi_logger:log(info, "Key not found"),
+            ClientPid ! {get, error},
             {reply, <<"not found">>, State}
     end;
 
@@ -175,6 +178,7 @@ handle_call({get_all}, _From, State) ->
     ClientPid = whereis(client),
     kivi_logger:log(info, "Trying to get all keys from database"),
 
+    ClientPid ! {get_all, ok, State},
     {reply, State, State}.
 
 -spec handle_info(string(), map()) -> {noreply, term()}.
