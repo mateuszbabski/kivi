@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 11.11.2023
+%% @last_updated: 12.11.2023
 %%
 %% @doc kivi simple key-value database - response printer
 %% @end
@@ -11,21 +11,20 @@
 -include("data.hrl").
 
 -export([print/1,
-        format_entry/2
+        print_size/1,
+        print_entry/2,
+        print_message/1
         ]).
 
-print(List) ->
-    case lists:sum(List) of
-        0 -> print_empty();
-        _ -> print_list(List)
-    end.
+-spec print(map() | list()) -> string().
 
--spec print_empty() -> list().
-print_empty() -> [].
+print(Entries) when is_list(Entries) ->
+    print_list(Entries);
+print(Entries) when is_map(Entries) ->
+    print_list(maps:to_list(Entries)).
 
-% check data structures
 -spec print_list(list()) -> string().
-print_list(List) -> 
+print_list(Entries) -> 
     %   {
     %       Key =>  {
     %               Id: 1234,
@@ -38,13 +37,20 @@ print_list(List) ->
     %               Updated: "2022-22-11T10:10:10"
     %               }    
     %   }
-    MappedList = lists:map(fun({Key, Data}) -> format_entry(Key, Data) end, maps:to_list(List)),
-    FormattedList = io_lib:format("{\n~s\n}", [lists:concat(MappedList, ", \n")]),
-    FormattedList.
+    case length(Entries) of
+        0 -> print_empty();
+        _ -> 
+            ListMapped = lists:map(fun({Key, Data}) -> format_entry(Key, Data) ++ ",\n" end, Entries),
+            FormattedMap = io_lib:format("{\n~s}", [ListMapped]),
+            io:format("~s\n", [FormattedMap])
+    end. 
+
+-spec print_empty() -> string().
+print_empty() -> 
+    io:format("Database is empty.\n").
 
 -spec format_entry(string(), #data{}) -> string().
-format_entry(Key, Entry) ->
-    %parse timestamp to normal date time
+format_entry(Key, #data{id = Id, value = Value, updated = Timestamp}) ->
     %
     % Key => {
     %        Id: 1234,
@@ -52,7 +58,27 @@ format_entry(Key, Entry) ->
     %        Updated: "2022-22-10T10:10:10"
     %        }    
     %
-    #data{id = Id, value = Value, updated = Timestamp} = Entry,
+    Updated = kivi_parsers:parse_timestamp_to_string(Timestamp),
+    io_lib:format("\"~s\" => {\n    \"id\": ~s,\n    \"value\": ~s,\n    \"updated\": ~s\n    }", [Key, Id, Value, Updated]).
+
+-spec print_entry(string(), #data{}) -> string().
+print_entry(Key, #data{id = Id, value = Value, updated = Timestamp}) ->
+    %
+    % Key => {
+    %        Id: 1234,
+    %        Value: "Value",
+    %        Updated: "2022-22-10T10:10:10"
+    %        }    
+    %
     Updated = kivi_parsers:parse_timestamp_to_string(Timestamp),    
-    FormattedEntry = io_lib:format("{\n~s => {\nid: ~s,\n value: ~s,\n updated: ~s\n}", [Key, Id, Value, Updated]),
-    FormattedEntry.
+    FormattedEntry = io_lib:format("\"~s\" => {\n    \"id\": ~s,\n    \"value\": ~s,\n    \"updated\": ~s\n    }", [Key, Id, Value, Updated]),
+    io:format("~s\n", [FormattedEntry]).
+
+-spec print_size(integer()) -> string().
+print_size(Size) ->
+    Response = io_lib:format("Number of keys in database is: ~p", [Size]),
+    io:format("~s\n", [Response]).
+
+-spec print_message(string()) -> string().
+print_message(Msg) ->
+    io:format("~s\n", [Msg]).
