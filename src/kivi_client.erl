@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 11.11.2023
+%% @last_updated: 12.11.2023
 %%
 %% @doc kivi simple key-value database - client side module
 %% @end
@@ -29,52 +29,70 @@ start_link() ->
 
 loop() ->
     receive
-        {add, ok, _NewEntry} ->
+        {add, ok, Key, NewEntry} ->
             kivi_logger:log(info, "Key added successfully."),
+            kivi_printer:print_entry(Key, NewEntry),
             loop();
 
         {add, error} ->
-            kivi_logger:log(error, "Adding key failed - Key exists in database."),
+            Message = "Adding key failed - Key exists in database.",
+            kivi_logger:log(error, Message),
+            kivi_printer:print_message(Message),
             loop();
 
-        {update, ok, _UpdatedEntry} ->
+        {update, ok, Key, UpdatedEntry} ->
             kivi_logger:log(info, "Key updated successfully."),
+            kivi_printer:print_entry(Key, UpdatedEntry),
             loop();
 
         {update, error} ->
-            kivi_logger:log(error, "Updating key failed - Key doesn't exist in database."),
+            Message = "Updating entry failed - Key doesn't exist in database.",
+            kivi_logger:log(error, Message),
+            kivi_printer:print_message(Message),
             loop();
 
-        {get, ok, _Entry} ->
+        {get, ok, Key, Entry} ->
             kivi_logger:log(info, "Key returned successfully."),
+            kivi_printer:print_entry(Key, Entry),
             loop();
 
         {get, error} ->
-            kivi_logger:log(error, "Returning key failed - Key doesn't exist in database."),
+            Message = "Returning entry failed - Key doesn't exist in database.",
+            kivi_logger:log(error, Message),
+            kivi_printer:print_message(Message),
             loop();
 
-        {get_all, ok, _List} ->
+        {get_all, ok, List} ->
             kivi_logger:log(info, "List returned successfully."),
+            kivi_printer:print(List),
             loop();
 
         {delete, ok, _Key} ->
-            kivi_logger:log(info, "Successfully deleted key."),
+            Message = "Successfully deleted key.",
+            kivi_logger:log(info, Message),
+            kivi_printer:print_message(Message),
             loop();
 
         {delete_all, ok} ->
-            kivi_logger:log(info, "Successfully deleted all keys."),
+            Message = "Successfully deleted all keys.",
+            kivi_logger:log(info, Message),
+            kivi_printer:print_message(Message),
             loop();
-
-        {sort, ok, _SortedData} ->
+        
+        {sort, ok, SortedData} ->
             kivi_logger:log(info, "Successfully returned all sorted keys."),
+            kivi_printer:print(SortedData),
             loop();
 
-        {get_size, ok, _Size} ->
+        {get_size, ok, Size} ->
             kivi_logger:log(info, "Successfully returned number of keys in database."),
+            kivi_printer:print_size(Size),
             loop();
 
-        _ -> 
-            kivi_logger:log(warn, "Unhandled response"),
+        _ ->
+            Message = "Unhandled response",
+            kivi_logger:log(warn, Message),
+            kivi_printer:print_message(Message),
             loop()
     end.
 
