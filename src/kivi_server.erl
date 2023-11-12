@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 11.11.2023
+%% @last_updated: 12.11.2023
 %%
 %% @doc kivi simple key-value database - server side module
 %% @end
@@ -64,7 +64,7 @@ handle_cast({add, Key, Value}, State) ->
             NewState = maps:put(Key, NewEntry, State),
             LogMessage = io_lib:format("Added Key: ~s to database", [Key]),
             kivi_logger:log(info, LogMessage),
-            ClientPid ! {add, ok, NewEntry},
+            ClientPid ! {add, ok, Key, NewEntry},
             {noreply, NewState}
     end;
 
@@ -82,7 +82,7 @@ handle_cast({update, Key, Value}, State) ->
             NewState = maps:put(Key, UpdatedEntry, State),
             LogMessage = io_lib:format("Updated Key: ~s to database", [Key]),
             kivi_logger:log(info, LogMessage),
-            ClientPid ! {update, ok, UpdatedEntry},
+            ClientPid ! {update, ok, Key, UpdatedEntry},
             {noreply, NewState};
 
         _ ->
@@ -160,7 +160,7 @@ handle_call({get, Key}, _From, State) ->
 
     case maps:find(Key, State) of
         {ok, Entry} -> 
-            ClientPid ! {get, ok, Entry},
+            ClientPid ! {get, ok, Key, Entry},
             {reply, Entry, State};
 
         error -> 
