@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 12.11.2023
+%% @last_updated: 14.11.2023
 %%
 %% @doc kivi simple key-value database - response printer
 %% @end
@@ -70,8 +70,7 @@ print_entry(Key, #data{id = Id, value = Value, updated = Timestamp}) ->
     %        Updated: "2022-22-10T10:10:10"
     %        }    
     %
-    Updated = kivi_parsers:parse_timestamp_to_string(Timestamp),    
-    FormattedEntry = io_lib:format("\"~s\" => {\n    \"id\": ~s,\n    \"value\": ~s,\n    \"updated\": ~s\n    }", [Key, Id, Value, Updated]),
+    FormattedEntry = format_entry(Key, #data{id = Id, value = Value, updated = Timestamp}),
     io:format("~s\n", [FormattedEntry]).
 
 -spec print_size(integer()) -> string().
