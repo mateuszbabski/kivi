@@ -2,7 +2,7 @@
 %% @author: Mateusz Babski
 %% @last_updated: 20.11.2023
 %%
-%% @doc kivi top level supervisor
+%% @doc kivi client module supervisor
 %% @end
 %%%-------------------------------------------------------------------
 
