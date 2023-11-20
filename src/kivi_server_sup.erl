@@ -6,7 +6,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
--module(kivi_sup).
+-module(kivi_server_sup).
 
 -behaviour(supervisor).
 
@@ -33,17 +33,11 @@ init([]) ->
                  intensity => 5,
                  period => 10},
     ChildSpecs = [
-        #{id => kivi_server_sup,
-          start => {kivi_server_sup, start_link, []},
+        #{id => server,
+          start => {kivi_server, start_link, []},
           restart => permanent,
           shutdown => 50000,
-          type => supervisor},
-          
-        #{id => kivi_client_sup,
-          start => {kivi_client_sup, start_link, []},
-          restart => permanent,
-          shutdown => 50000,
-          type => supervisor}         
+          type => worker}     
     ],
     {ok, {SupFlags, ChildSpecs}}.
 
