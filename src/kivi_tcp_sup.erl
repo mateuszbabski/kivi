@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 20.11.2023
+%% @last_updated: 23.11.2023
 %%
 %% @doc kivi tcp module supervisor
 %% @end

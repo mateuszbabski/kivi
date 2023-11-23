@@ -148,3 +148,17 @@ sort(SortingBy) ->
     kivi_logger:log(info, LogMessage),
     gen_server:call({global, kivi_server}, {sort, SortingBy}),
     io:format("Sort operation sent to server.\n").
+
+%%%% send_request to tcp
+%send_request(Request) ->
+%    {ok, Socket} = gen_tcp:connect({127, 0, 0, 1}, 8081, []),
+%    gen_tcp:send(Socket, encode_request(Request)),
+%    receive
+%        {tcp, Socket, Bin} ->
+%            Response = decode_response(Bin),
+%            handle_response(Response),
+%            gen_tcp:close(Socket);
+%        _ ->
+%            io:format("Error receiving response from server"),
+%            gen_tcp:close(Socket)
+%    end.
