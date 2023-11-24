@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 12.11.2023
+%% @last_updated: 24.11.2023
 %%
 %% @doc kivi simple key-value database - client side module
 %% @end
@@ -96,6 +96,7 @@ loop() ->
             loop()
     end.
 
+%% implement send_request for passing request to tcp
 -spec add(Key :: string(), Value :: string()) -> ok | {badargument, string()}.
 add(Key, Value) ->
     LogMessage = io_lib:format("Trying to add to Database - Key: ~s, Value: ~s", [Key, Value]),
@@ -162,3 +163,8 @@ sort(SortingBy) ->
 %            io:format("Error receiving response from server"),
 %            gen_tcp:close(Socket)
 %    end.
+
+% handle_response(Response) ->
+%   receive
+%   add cases of response
+%   end.
