@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 29.10.2023
+%% @last_updated: 24.11.2023
 %%
 %% @doc kivi simple key-value database - parsers
 %% @end
@@ -11,7 +11,9 @@
 -export([parse_datetime/1,
          parse_to_datetime/1,
          parse_date_log/1,
-         parse_timestamp_to_string/1
+         parse_timestamp_to_string/1,
+         encode_message/1,
+         decode_message/1
         ]).
 
 -type date() :: tuple().
@@ -61,4 +63,12 @@ parse_time(Time) ->
     SplitTime = string:split(NewTime, ":", all),
     ParsedTime = [list_to_integer(X) || X <- SplitTime],
     list_to_tuple(ParsedTime).
+
+-spec encode_message(term()) -> binary().
+encode_message(Message) -> 
+    term_to_binary(Message).
+
+-spec decode_message(binary()) -> term().
+decode_message(Message) -> 
+    binary_to_term(Message).
     
