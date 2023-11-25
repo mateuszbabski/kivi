@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 24.11.2023
+%% @last_updated: 25.11.2023
 %%
 %% @doc kivi simple key-value database - parsers
 %% @end
@@ -13,7 +13,8 @@
          parse_date_log/1,
          parse_timestamp_to_string/1,
          encode_message/1,
-         decode_message/1
+         decode_message/1,
+         decode_response/1
         ]).
 
 -type date() :: tuple().
@@ -68,7 +69,11 @@ parse_time(Time) ->
 encode_message(Message) -> 
     term_to_binary(Message).
 
--spec decode_message(binary()) -> term().
-decode_message(Message) -> 
+%%% how to decode properly message
+-spec decode_message(list()) -> term().
+decode_message(Message) ->
     binary_to_term(Message).
     
+-spec decode_response(list()) -> term().
+decode_response(Response) ->
+    binary_to_term(list_to_binary(Response)).
