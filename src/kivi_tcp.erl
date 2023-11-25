@@ -49,7 +49,7 @@ loop(Socket) ->
     inet:setopts(Socket, [{active, once}]),
     receive
         {tcp, Socket, Bin} ->
-            Request = kivi_parsers:decode_message(Bin),
+            Request = kivi_parsers:decode_request(Bin),
             LogMessage = io_lib:format("Handling request: ~p", [Request]),
             kivi_logger:log(info, LogMessage),
             handle_request(Socket, Request),            
@@ -69,7 +69,7 @@ loop(Socket) ->
         {timeout} ->
             kivi_logger:log(warn, "Timeout waiting for response from the server"),
             % Handle timeout, e.g., send an error response to the client
-            gen_tcp:send(Socket, kivi_parsers:encode_message({error, "Timeout waiting for response"})),
+            gen_tcp:send(Socket, kivi_parsers:encode_request({error, "Timeout waiting for response"})),
             loop(Socket);
         
         _ ->
@@ -120,10 +120,10 @@ handle_response(Socket) ->
     receive 
         {kivi_server_response, Response} ->
             kivi_logger:log(info, "Received response from server"),
-            EncodedResponse = kivi_parsers:encode_message(Response),
+            EncodedResponse = kivi_parsers:encode_request(Response),
             gen_tcp:send(Socket, EncodedResponse);
 
         {timeout} ->
             kivi_logger:log(warn, "Timeout waiting for response from server"),
-            gen_tcp:send(Socket, kivi_parsers:encode_message({error, "Timeout"}))
+            gen_tcp:send(Socket, kivi_parsers:encode_request({error, "Timeout"}))
     end.

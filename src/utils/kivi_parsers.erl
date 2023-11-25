@@ -12,8 +12,8 @@
          parse_to_datetime/1,
          parse_date_log/1,
          parse_timestamp_to_string/1,
-         encode_message/1,
-         decode_message/1,
+         encode_request/1,
+         decode_request/1,
          decode_response/1
         ]).
 
@@ -65,14 +65,14 @@ parse_time(Time) ->
     ParsedTime = [list_to_integer(X) || X <- SplitTime],
     list_to_tuple(ParsedTime).
 
--spec encode_message(term()) -> binary().
-encode_message(Message) -> 
-    term_to_binary(Message).
+-spec encode_request(term()) -> binary().
+encode_request(Request) -> 
+    term_to_binary(Request).
 
-%%% how to decode properly message
--spec decode_message(list()) -> term().
-decode_message(Message) ->
-    binary_to_term(Message).
+%%% how to decode properly request
+-spec decode_request(list()) -> term().
+decode_request(Request) ->
+    binary_to_term(Request).
     
 -spec decode_response(list()) -> term().
 decode_response(Response) ->
