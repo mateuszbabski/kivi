@@ -37,7 +37,7 @@ accept_connections(ListenSocket) ->
         {ok, Socket} ->
             kivi_logger:log(info, "Connection accepted"),
             loop(Socket),            
-            accept_connections(ListenSocket);
+            accept_connections(ListenSocket); % to delete probably
 
         {error, Reason} ->
             LogMessage = io_lib:format("Error accepting connection: ~p", [Reason]),
