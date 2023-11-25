@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 24.11.2023
+%% @last_updated: 25.11.2023
 %%
 %% @doc kivi simple key-value database - tcp layer module
 %% @end
@@ -49,8 +49,8 @@ loop(Socket) ->
     inet:setopts(Socket, [{active, once}]),
     receive
         {tcp, Socket, Bin} ->
-            Request = decode_request(Bin),
-            LogMessage = io_lib:format("Handling request: ~s", [Request]),
+            Request = kivi_parsers:decode_message(Bin),
+            LogMessage = io_lib:format("Handling request: ~p", [Request]),
             kivi_logger:log(info, LogMessage),
             handle_request(Socket, Request),            
             loop(Socket);
@@ -59,17 +59,17 @@ loop(Socket) ->
             LogMessage = io_lib:format("Connection closed: ~p", [Socket]),
             kivi_logger:log(error, LogMessage),
             ok;
-%% split this for many response types 
-        {kivi_server_response, Ref, Response} ->
+
+        {kivi_server_response, Response} ->
             kivi_logger:log(info, "Received response from the server"),
             % Now, send the response back to the client
-            gen_tcp:send(Socket, encode_response(Response)),
+            gen_tcp:send(Socket, Response),
             loop(Socket);
 
-        {timeout, Ref} ->
+        {timeout} ->
             kivi_logger:log(warn, "Timeout waiting for response from the server"),
             % Handle timeout, e.g., send an error response to the client
-            gen_tcp:send(Socket, encode_response({error, "Timeout waiting for response"})),
+            gen_tcp:send(Socket, kivi_parsers:encode_message({error, "Timeout waiting for response"})),
             loop(Socket);
         
         _ ->
@@ -79,108 +79,51 @@ loop(Socket) ->
 
 handle_request(Socket, Request) ->
     kivi_logger:log(info, "Sending client's request to the server"),
-    Ref = make_ref(),
-    gen_server:cast({global, kivi_server}, {request, self(), Ref, Request}),
-    receive 
-        {kivi_server_response, Ref, Response} ->
-            kivi_logger:log(info, "Received response from server"),
-            gen_tcp:send(Socket, encode_response(Response);
-
-        {timeout, Ref} ->
-            kivi_logger:log(warn, "Timeout waiting for response from server"),
-            % add handler
-            gen_tcp:send(Socket, encode_response({error, "Timeout"}))
-    end.
-
-handle_request(Socket, Request) ->
-    kivi_logger:log(info, "Sending client's request to the server"),
-    Ref = make_ref(),
     case Request of
         {add, Key, Value} ->
-            gen_server:cast({global, kivi_server}, {add, Key, Value, Ref}),
-            handle_response(Socket, Ref);
+            gen_server:cast({global, kivi_server}, {add, Key, Value}),
+            handle_response(Socket);
 
         {update, Key, Value} ->
-            gen_server:cast({global, kivi_server}, {update, Key, Value, Ref}),
-            handle_response(Socket, Ref);
+            gen_server:cast({global, kivi_server}, {update, Key, Value}),
+            handle_response(Socket);
 
         {get, Key} ->
-            gen_server:call({global, kivi_server}, {get, Key, Ref}),
-            handle_response(Socket, Ref);
+            gen_server:call({global, kivi_server}, {get, Key}),
+            handle_response(Socket);
 
         {get_all} ->
-            gen_server:call({global, kivi_server}, {get_all, Ref}),
-            handle_response(Socket, Ref);
+            gen_server:call({global, kivi_server}, {get_all}),
+            handle_response(Socket);
 
         {delete, Key} ->
-            gen_server:cast({global, kivi_server}, {delete, Key, Ref}),
-            handle_response(Socket, Ref);
+            gen_server:cast({global, kivi_server}, {delete, Key}),
+            handle_response(Socket);
 
         {delete_all} ->
-            gen_server:cast({global, kivi_server}, {delete_all, Ref}),
-            handle_response(Socket, Ref);
+            gen_server:cast({global, kivi_server}, {delete_all}),
+            handle_response(Socket);
 
         {get_size} ->
-            gen_server:call({global, kivi_server}, {get_size, Ref}),
-            handle_response(Socket, Ref);
+            gen_server:call({global, kivi_server}, {get_size}),
+            handle_response(Socket);
 
         {sort, SortingBy} ->
-            gen_server:call({global, kivi_server}, {sort, SortingBy, Ref}),
-            handle_response(Socket, Ref);
+            gen_server:call({global, kivi_server}, {sort, SortingBy}),
+            handle_response(Socket);
 
          _ ->
             kivi_logger:log(error, "Invalid request format")
     end.
 
-handle_response(Socket, Ref) ->
+handle_response(Socket) ->
     receive 
-        {kivi_server_response, Ref, Response} ->
+        {kivi_server_response, Response} ->
             kivi_logger:log(info, "Received response from server"),
-            gen_tcp:send(Socket, encode_response(Response));
+            EncodedResponse = kivi_parsers:encode_message(Response),
+            gen_tcp:send(Socket, EncodedResponse);
 
-        {timeout, Ref} ->
+        {timeout} ->
             kivi_logger:log(warn, "Timeout waiting for response from server"),
-            % add handler
-            gen_tcp:send(Socket, encode_response({error, "Timeout"}))
+            gen_tcp:send(Socket, kivi_parsers:encode_message({error, "Timeout"}))
     end.
-
-
-handle_request(Socket, {add, Key, Value}) ->  
-    kivi_logger:log(info, "Sending client's request: ADD to the server"),  
-    gen_server:cast({global, kivi_server}, {add, Key, Value}),
-    gen_tcp:send(Socket, encode_request({add, Key, Value}));
-
-handle_request(Socket, {update, Key, Value}) ->    
-    kivi_logger:log(info, "Sending client's request: UPDATE to the server"),
-    gen_server:cast({global, kivi_server}, {update, Key, Value}),
-    gen_tcp:send(Socket, encode_request({update, Key, Value}));
-
-handle_request(Socket, {get, Key}) ->
-    kivi_logger:log(info, "Sending client's request: GET to the server"),    
-    gen_server:call({global, kivi_server}, {get, Key}),
-    gen_tcp:send(Socket, encode_request({get, Key}));
-
-handle_request(Socket, {get_all}) ->
-    kivi_logger:log(info, "Sending client's request: GET_ALL to the server"),    
-    gen_server:call({global, kivi_server}, {get_all}),
-    gen_tcp:send(Socket, encode_request({get_all}));
-
-handle_request(Socket, {delete, Key}) ->
-    kivi_logger:log(info, "Sending client's request: DELETE to the server"),    
-    gen_server:cast({global, kivi_server}, {delete, Key}),
-    gen_tcp:send(Socket, encode_request({delete, Key}));
-
-handle_request(Socket, {delete_all}) ->
-    kivi_logger:log(info, "Sending client's request: DELETE_ALL to the server"),    
-    gen_server:cast({global, kivi_server}, {delete_all}),
-    gen_tcp:send(Socket, encode_request({delete_all}));
-
-handle_request(Socket, {get_size}) ->
-    kivi_logger:log(info, "Sending client's request: GET_SIZE to the server"),    
-    gen_server:call({global, kivi_server}, {get_size}),
-    gen_tcp:send(Socket, encode_request({get_size}));
-
-handle_request(Socket, {sort, SortingBy}) ->
-    kivi_logger:log(info, "Sending client's request: SORT to the server"),    
-    gen_server:call({global, kivi_server}, {sort, SortingBy}),
-    gen_tcp:send(Socket, encode_request({sort, SortingBy}));
