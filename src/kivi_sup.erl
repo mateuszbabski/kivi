@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 20.11.2023
+%% @last_updated: 27.11.2023
 %%
 %% @doc kivi top level supervisor
 %% @end
@@ -39,17 +39,17 @@ init([]) ->
           shutdown => 50000,
           type => supervisor},
           
-        #{id => kivi_client_sup,
-          start => {kivi_client_sup, start_link, []},
-          restart => permanent,
-          shutdown => 50000,
-          type => supervisor},
-
           #{id => kivi_tcp_sup,
           start => {kivi_tcp_sup, start_link, []},
           restart => permanent,
           shutdown => 50000,
-          type => supervisor}           
+          type => supervisor},
+
+        #{id => kivi_client_sup,
+          start => {kivi_client_sup, start_link, []},
+          restart => permanent,
+          shutdown => 50000,
+          type => supervisor}
     ],
     {ok, {SupFlags, ChildSpecs}}.
 
