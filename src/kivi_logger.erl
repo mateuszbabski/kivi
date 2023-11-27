@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 29.10.2023
+%% @last_updated: 27.11.2023
 %%
 %% @doc kivi simple key-value database - logger
 %% @end
@@ -15,9 +15,11 @@
          log/2
         ]).
 
-%% API
-%% logger prints message on screen and saves it to dedicated file
-%% start logger - create and open file for logs
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Starts logger and generates log file.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec start_logger() -> {ok, map()} | {error, _}.
 start_logger() ->
     LogFile = generate_log_file_name(),
@@ -30,13 +32,21 @@ start_logger() ->
             {error, Error}
     end.
 
-%% stop logger - stop and close file for logs
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Stops logger and closes file.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec stop_logger(map()) -> ok.
 stop_logger(#state{log_file = LogFile}) ->
     log(info, "Closing log file"),
     ok = file:close(LogFile).
 
-%% log to the file - inputs are log status and message
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Logs status and message to the log file.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec log(atom(), string()) -> ok | {error, no_state} | {error, no_log_file}.
 log(Status, Message) ->
     case application:get_env(kivi, logger_state) of
@@ -52,7 +62,12 @@ log(Status, Message) ->
             end
     end.
 
-% generate dynamically log file name while starting an app
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Generates dynamically log file name 
+%%% while starting an app.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec generate_log_file_name() -> string().
 generate_log_file_name() ->
     CurrentDateTime = kivi_datetime:get_current_datetime(),
@@ -61,7 +76,11 @@ generate_log_file_name() ->
     FileName = "Kivi" ++ DateTimeString ++ ".txt",
     Directory ++ FileName.
 
-% log message formatter
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Formats log messages.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec format_log_entry(atom(), string()) -> string().
 format_log_entry(Status, Message) ->
     CurrentTime = kivi_datetime:get_current_datetime(),
