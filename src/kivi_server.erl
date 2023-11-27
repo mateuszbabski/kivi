@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 25.11.2023
+%% @last_updated: 27.11.2023
 %%
 %% @doc kivi simple key-value database - server side module
 %% @end
@@ -23,7 +23,11 @@
         code_change/3
         ]).
 
-%% start_link
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Starts server module.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 start_link() ->
     kivi_logger:log(info, "Starting database server.."), 
@@ -38,7 +42,12 @@ start_link() ->
 %%                  Callbacks
 %%=============================================
 
-%% init
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Initializing empty map 
+%%% as database structure.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec init([]) -> {ok, map()}.
 init([]) ->
     {ok, #{}}.
@@ -195,7 +204,11 @@ terminate(Reason, _State) ->
     kivi_logger:log(error, io_lib:format("Server message: Terminated with reason: ~p", [Reason])),
     ok.
 
-%% helpers - simple number generator
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Entry ID creator.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec create_id() -> string().
 create_id() ->
     Id = float_to_list(rand:uniform()),
