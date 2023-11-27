@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 25.11.2023
+%% @last_updated: 27.11.2023
 %%
 %% @doc kivi simple key-value database - tcp layer module
 %% @end
@@ -13,6 +13,12 @@
 
 -define(DEFAULT_PORT, 8081).
 
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Start Tcp module that listens to chosen port
+%%% and spawns accept_connections function.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 start_link() ->
     case gen_tcp:listen(?DEFAULT_PORT, [binary, {active, false}]) of
@@ -31,13 +37,18 @@ start_link() ->
             kivi_logger:log(error, LogMessage)
     end.
 
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Accepts Listening socket and loops over
+%%% returned socket.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 accept_connections(ListenSocket) ->
     kivi_logger:log(info, "Waiting for connections..."),
     case gen_tcp:accept(ListenSocket) of
         {ok, Socket} ->
             kivi_logger:log(info, "Connection accepted"),
-            loop(Socket),            
-            accept_connections(ListenSocket); % to delete probably
+            loop(Socket);
 
         {error, Reason} ->
             LogMessage = io_lib:format("Error accepting connection: ~p", [Reason]),
@@ -45,6 +56,12 @@ accept_connections(ListenSocket) ->
             kivi_logger:log(error, "Listening socket closed. Server shutting down.")
     end.
 
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Loops over socket and waits for messages
+%%% from both client's and server's module.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 loop(Socket) ->
     inet:setopts(Socket, [{active, once}]),
     receive
@@ -77,6 +94,12 @@ loop(Socket) ->
             loop(Socket)
     end.
 
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Handles client's request and sends
+%%% it to the server.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_request(Socket, Request) ->
     kivi_logger:log(info, "Sending client's request to the server"),
     case Request of
@@ -116,6 +139,12 @@ handle_request(Socket, Request) ->
             kivi_logger:log(error, "Invalid request format")
     end.
 
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Handles servers' response and sends
+%%% it back to the client.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_response(Socket) ->
     receive 
         {kivi_server_response, Response} ->
