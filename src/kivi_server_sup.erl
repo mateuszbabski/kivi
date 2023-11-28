@@ -2,11 +2,11 @@
 %% @author: Mateusz Babski
 %% @last_updated: 28.11.2023
 %%
-%% @doc kivi top level supervisor
+%% @doc kivi server module supervisor
 %% @end
 %%%-------------------------------------------------------------------
 
--module(kivi_sup).
+-module(kivi_server_sup).
 
 -behaviour(supervisor).
 
@@ -33,26 +33,14 @@ init([]) ->
                  intensity => 5,
                  period => 10},
     ChildSpecs = [
-        #{id => kivi_server_sup,
-          start => {kivi_server_sup, start_link, []},
+        #{id => server,
+          start => {kivi_server, start_link, []},
           restart => permanent,
           shutdown => 50000,
-          type => supervisor},
-          
-          #{id => kivi_tcp_sup,
-          start => {kivi_tcp_sup, start_link, []},
-          restart => permanent,
-          shutdown => 50000,
-          type => supervisor},
-
-        #{id => kivi_client_sup,
-          start => {kivi_client_sup, start_link, []},
-          restart => permanent,
-          shutdown => 50000,
-          type => supervisor}
+          type => worker}     
     ],
 
-    kivi_logger:log(info, "Starting top-level supervisor"),
+    kivi_logger:log(info, "Starting Server's supervisor..."),
 
     {ok, {SupFlags, ChildSpecs}}.
 

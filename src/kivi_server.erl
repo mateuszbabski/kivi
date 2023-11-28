@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 12.11.2023
+%% @last_updated: 27.11.2023
 %%
 %% @doc kivi simple key-value database - server side module
 %% @end
@@ -23,7 +23,11 @@
         code_change/3
         ]).
 
-%% start_link
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Starts server module.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 start_link() ->
     kivi_logger:log(info, "Starting database server.."), 
@@ -38,33 +42,37 @@ start_link() ->
 %%                  Callbacks
 %%=============================================
 
-%% init
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Initializing empty map 
+%%% as database structure.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec init([]) -> {ok, map()}.
 init([]) ->
     {ok, #{}}.
 
-%% handle_cast
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 %%% -spec handle_cast({atom(), string(), string()}, map()) -> {noreply, map()}.
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({add, Key, Value}, State) ->
-    ClientPid = whereis(client),
+    TcpPid = whereis(tcp_process),
 
     case maps:is_key(Key, State) of
         true ->
-            LogMessage = io_lib:format("Adding stopped - Key: ~s already exists in database", [Key]),
+            LogMessage = io_lib:format("Server message: Adding stopped - Key: ~s already exists in database", [Key]),
             kivi_logger:log(error, LogMessage),
-            ClientPid ! {add, error},
+            TcpPid ! {kivi_server_response, {add, error}},
             {noreply, State};
 
         _ ->
             NewEntry = #data{id = create_id(), value = Value, updated = kivi_datetime:get_timestamp()},
             NewState = maps:put(Key, NewEntry, State),
-            LogMessage = io_lib:format("Added Key: ~s to database", [Key]),
+            LogMessage = io_lib:format("Server message: Added Key: ~s to database", [Key]),
             kivi_logger:log(info, LogMessage),
-            ClientPid ! {add, ok, Key, NewEntry},
+            TcpPid ! {kivi_server_response, {add, ok, Key, NewEntry}},
             {noreply, NewState}
     end;
 
@@ -74,21 +82,21 @@ handle_cast({add, Key, Value}, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({update, Key, Value}, State) ->
-    ClientPid = whereis(client),
+    TcpPid = whereis(tcp_process),
 
     case maps:find(Key, State) of
         {ok, Entry} ->
             UpdatedEntry = Entry#data{value = Value, updated = kivi_datetime:get_timestamp()},
             NewState = maps:put(Key, UpdatedEntry, State),
-            LogMessage = io_lib:format("Updated Key: ~s to database", [Key]),
+            LogMessage = io_lib:format("Server message: Updated Key: ~s to database", [Key]),
             kivi_logger:log(info, LogMessage),
-            ClientPid ! {update, ok, Key, UpdatedEntry},
+            TcpPid ! {kivi_server_response, {update, ok, Key, UpdatedEntry}},
             {noreply, NewState};
 
         _ ->
-            LogMessage = io_lib:format("Updating stopped - Key: ~s doesn't exist", [Key]),
+            LogMessage = io_lib:format("Server message: Updating stopped - Key: ~s doesn't exist", [Key]),
             kivi_logger:log(error, LogMessage),
-            ClientPid ! {update, error},
+            TcpPid ! {kivi_server_response, {update, error}},
             {noreply, State}
     end;
 
@@ -98,12 +106,12 @@ handle_cast({update, Key, Value}, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({delete, Key}, State) ->
-    ClientPid = whereis(client),    
-    LogMessage = io_lib:format("Deleting Key: ~s from database", [Key]),
+    TcpPid = whereis(tcp_process),    
+    LogMessage = io_lib:format("Server message: Deleting Key: ~s from database", [Key]),
     kivi_logger:log(info, LogMessage),
 
     NewState = maps:remove(Key, State),
-    ClientPid ! {delete, ok, Key},
+    TcpPid ! {kivi_server_response, {delete, ok, Key}},
     {noreply, NewState};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,26 +120,25 @@ handle_cast({delete, Key}, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_cast({delete_all}, _State) ->
-    ClientPid = whereis(client),
-    kivi_logger:log(info, "Deleting all keys Client database"),
+    TcpPid = whereis(tcp_process),
+    kivi_logger:log(info, "Server message: Deleting all keys Client database"),
 
     NewState = #{},
-    ClientPid ! {delete_all, ok},
+    TcpPid ! {kivi_server_response, {delete_all, ok}},
     {noreply, NewState}.
 
-%% handle_call
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 %%% -spec handle_call({atom()}, string()) -> {reply, term(), term()}.
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({sort, SortingBy}, _From, State) ->
-    ClientPid = whereis(client),
-    LogMessage = io_lib:format("Sorted by ~s", [SortingBy]),
+    TcpPid = whereis(tcp_process),
+    LogMessage = io_lib:format("Server message: Sorted by ~s", [SortingBy]),
     kivi_logger:log(info, LogMessage),
 
     SortedData = kivi_sorter:sort_data(State, SortingBy),
-    ClientPid ! {sort, ok, SortedData},
+    TcpPid ! {kivi_server_response, {sort, ok, SortedData}},
     {reply, SortedData, State};
 
 
@@ -141,11 +148,11 @@ handle_call({sort, SortingBy}, _From, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get_size}, _From, State) ->
-    ClientPid = whereis(client),
-    kivi_logger:log(info, "Trying to get size of database"),
+    TcpPid = whereis(tcp_process),
+    kivi_logger:log(info, "Server message: Trying to get size of database"),
 
     Size = maps:size(State),
-    ClientPid ! {get_size, ok, Size},
+    TcpPid ! {kivi_server_response, {get_size, ok, Size}},
     {reply, Size, State};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -154,18 +161,18 @@ handle_call({get_size}, _From, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get, Key}, _From, State) ->
-    ClientPid = whereis(client),
-    LogMessage = io_lib:format("Trying to get key: ~s from database", [Key]),
+    TcpPid = whereis(tcp_process),
+    LogMessage = io_lib:format("Server message: Trying to get key: ~s from database", [Key]),
     kivi_logger:log(info, LogMessage),
 
     case maps:find(Key, State) of
         {ok, Entry} -> 
-            ClientPid ! {get, ok, Key, Entry},
+            TcpPid ! {kivi_server_response, {get, ok, Key, Entry}},
             {reply, Entry, State};
 
         error -> 
-            kivi_logger:log(info, "Key not found"),
-            ClientPid ! {get, error},
+            kivi_logger:log(info, "Server message: Key not found"),
+            TcpPid ! {kivi_server_response, {get, error}},
             {reply, <<"not found">>, State}
     end;
 
@@ -175,10 +182,10 @@ handle_call({get, Key}, _From, State) ->
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_call({get_all}, _From, State) ->
-    ClientPid = whereis(client),
-    kivi_logger:log(info, "Trying to get all keys from database"),
+    TcpPid = whereis(tcp_process),
+    kivi_logger:log(info, "Server message: Trying to get all keys from database"),
 
-    ClientPid ! {get_all, ok, State},
+    TcpPid ! {kivi_server_response, {get_all, ok, State}},
     {reply, State, State}.
 
 -spec handle_info(string(), map()) -> {noreply, term()}.
@@ -194,10 +201,14 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec terminate(string(), term()) -> ok.
 terminate(Reason, _State) ->
-    kivi_logger:log(error, io_lib:format("Terminated with reason: ~p", [Reason])),
+    kivi_logger:log(error, io_lib:format("Server message: Terminated with reason: ~p", [Reason])),
     ok.
 
-%% helpers - simple number generator
+%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Entry ID creator.
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec create_id() -> string().
 create_id() ->
     Id = float_to_list(rand:uniform()),
