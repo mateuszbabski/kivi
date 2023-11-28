@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 27.11.2023
+%% @last_updated: 28.11.2023
 %%
 %% @doc kivi top level supervisor
 %% @end
@@ -51,6 +51,9 @@ init([]) ->
           shutdown => 50000,
           type => supervisor}
     ],
+
+    kivi_logger:log(info, "Starting top-level supervisor"),
+
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions

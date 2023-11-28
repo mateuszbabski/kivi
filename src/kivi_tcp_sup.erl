@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 23.11.2023
+%% @last_updated: 28.11.2023
 %%
 %% @doc kivi tcp module supervisor
 %% @end
@@ -39,6 +39,9 @@ init([]) ->
           shutdown => 50000,
           type => worker}     
     ],
+
+    kivi_logger:log(info, "Starting TCP's supervisor..."),
+
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions
