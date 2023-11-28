@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 27.11.2023
+%% @last_updated: 28.11.2023
 %%
 %% @doc kivi simple key-value database - client side module
 %% @end
@@ -9,8 +9,7 @@
 
 -module(kivi_client).
 
--export([start_link/0,
-        stop/0
+-export([start_link/0
         ]).
 
 -export([add/2,
@@ -37,17 +36,6 @@ start_link() ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
-%%% Stopping client and tcp process.
-%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--spec stop() -> ok.
-stop() ->
-  client ! {stop},
-  exit(whereis(client), normal),
-  ok.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%
 %%% Initial connection to host and loop over socket
 %%% it to keep connection open.
 %%%
@@ -69,12 +57,15 @@ init() ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 loop(Socket) ->
     receive
-        {stop} ->
-            gen_tcp:close(Socket);
-
         {Request, _From} ->
             send_request(Socket, Request),
+            loop(Socket);
+
+        _ ->
+            LogMessage = "Unhandled request",
+            kivi_logger:log(warn, LogMessage),
             loop(Socket)
+
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
