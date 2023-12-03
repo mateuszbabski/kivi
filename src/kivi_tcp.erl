@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %% @author: Mateusz Babski
-%% @last_updated: 27.11.2023
+%% @last_updated: 03.12.2023
 %%
 %% @doc kivi simple key-value database - tcp layer module
 %% @end
@@ -59,7 +59,7 @@ accept_connections(ListenSocket) ->
 %%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 %%% Loops over socket and waits for messages
-%%% from both client's and server's module.
+%%% from client's module.
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 loop(Socket) ->
@@ -76,18 +76,6 @@ loop(Socket) ->
             LogMessage = io_lib:format("Connection closed: ~p", [Socket]),
             kivi_logger:log(error, LogMessage),
             ok;
-
-        {kivi_server_response, Response} ->
-            kivi_logger:log(info, "Received response from the server"),
-            % Now, send the response back to the client
-            gen_tcp:send(Socket, Response),
-            loop(Socket);
-
-        {timeout} ->
-            kivi_logger:log(warn, "Timeout waiting for response from the server"),
-            % Handle timeout, e.g., send an error response to the client
-            gen_tcp:send(Socket, kivi_parsers:encode_request({error, "Timeout waiting for response"})),
-            loop(Socket);
         
         _ ->
             io:format("Error reading from socket"),
